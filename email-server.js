@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Yahoo Mail MCP Server with OAuth2 - A beginner-friendly introduction to MCP
- * This server provides read-only access to Yahoo Mail via OAuth2 and IMAP
+ * Email MCP Server (IMAP)
+ * Host configurable via IMAP_HOST (defaults to Yahoo Mail).
+ * Credentials: EMAIL_ADDRESS/EMAIL_PASSWORD (or YAHOO_EMAIL/YAHOO_APP_PASSWORD).
+ * Calendar lives in the separate calendar-server.js.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -375,24 +377,31 @@ class YahooMailMCPServer {
      */
     async createImapConnection() {
         return new Promise((resolve, reject) => {
-            if (!process.env.YAHOO_EMAIL || !process.env.YAHOO_APP_PASSWORD) {
-                const error = new Error('YAHOO_EMAIL or YAHOO_APP_PASSWORD environment variables are not set');
+            // Credentials: EMAIL_ADDRESS/EMAIL_PASSWORD are the generic names;
+            // YAHOO_EMAIL/YAHOO_APP_PASSWORD still work for backward compatibility.
+            const user = process.env.EMAIL_ADDRESS || process.env.YAHOO_EMAIL;
+            const password = process.env.EMAIL_PASSWORD || process.env.YAHOO_APP_PASSWORD;
+            const host = process.env.IMAP_HOST || 'imap.mail.yahoo.com';
+            const port = parseInt(process.env.IMAP_PORT || '993', 10);
+
+            if (!user || !password) {
+                const error = new Error('Email credentials are not set (set EMAIL_ADDRESS + EMAIL_PASSWORD, or YAHOO_EMAIL + YAHOO_APP_PASSWORD)');
                 console.error('[IMAP] Configuration error:', error.message);
                 reject(error);
                 return;
             }
 
             const imap = new Imap({
-                user: process.env.YAHOO_EMAIL,
-                password: process.env.YAHOO_APP_PASSWORD,
-                host: 'imap.mail.yahoo.com',
-                port: 993,
+                user,
+                password,
+                host,
+                port,
                 tls: true,
                 authTimeout: 30000,
                 connTimeout: 30000,
                 tlsOptions: {
                     rejectUnauthorized: true,
-                    servername: 'imap.mail.yahoo.com',
+                    servername: host,
                     minVersion: 'TLSv1.2'
                 }
             });
